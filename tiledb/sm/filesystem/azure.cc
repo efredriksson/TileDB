@@ -1109,34 +1109,40 @@ void Azure::write_blocks(
   }
 
   BlockListUploadState* state;
+  bool newly_created = false;
   // Protect 'block_list_upload_states_' from concurrent read and writes.
+  // The lock is released before the is_file HTTP call so that concurrent
+  // writes to different URIs do not serialise on the network round-trip.
   {
     std::unique_lock<std::mutex> states_lock(block_list_upload_states_lock_);
 
     auto state_iter = block_list_upload_states_.find(uri.to_string());
     if (state_iter == block_list_upload_states_.end()) {
-      // Delete file if it exists (overwrite).
-      if (is_file(uri)) {
-        remove_file(uri);
-      }
-
       // Instantiate the new state.
-      BlockListUploadState state;
+      BlockListUploadState new_state;
 
       // Store the new state.
       const std::pair<
           std::unordered_map<std::string, BlockListUploadState>::iterator,
           bool>
           emplaced = block_list_upload_states_.emplace(
-              uri.to_string(), std::move(state));
+              uri.to_string(), std::move(new_state));
       passert(emplaced.second);
       state_iter = emplaced.first;
+      newly_created = true;
     }
 
     state = &state_iter->second;
     // We're done reading and writing from 'block_list_upload_states_'.
     // Mutating the 'state' element does not affect the thread-safety of
     // 'block_list_upload_states_'.
+  }
+
+  // Delete file if it exists (overwrite).  Done outside the lock so that
+  // concurrent writes to different URIs are not serialised on this HTTP call.
+  // Only the thread that won the map-insert race needs to do this.
+  if (newly_created && is_file(uri)) {
+    remove_file(uri);
   }
 
   auto [container_name, blob_path] = parse_azure_uri(uri);
