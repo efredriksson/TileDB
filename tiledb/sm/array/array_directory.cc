@@ -386,8 +386,10 @@ Status ArrayDirectory::load() {
   RETURN_NOT_OK(resources_.get().compute_tp().wait_all(tasks));
 
   if (mode_ != ArrayDirectoryMode::COMMITS) {
-    // Add old array schema, if required.
-    if (mode_ != ArrayDirectoryMode::SCHEMA_ONLY) {
+    // Add old array schema, if required (pre-v10 compatibility).
+    auto legacy_compat = resources_.get().config().get<bool>(
+        "sm.legacy_compatibility", Config::must_find);
+    if (legacy_compat && mode_ != ArrayDirectoryMode::SCHEMA_ONLY) {
       auto old_schema_uri = uri_.join_path(constants::array_schema_filename);
       for (auto& uri : root_dir_uris) {
         if (uri == old_schema_uri) {
@@ -1185,10 +1187,11 @@ ArrayDirectory::compute_filtered_uris(
 
 Status ArrayDirectory::compute_array_schema_uris(
     const std::vector<URI>& array_schema_dir_uris) {
-  if (mode_ == ArrayDirectoryMode::SCHEMA_ONLY) {
-    // If not in schema only mode, this is done using the listing from the root
-    // dir.
-    // Optionally add the old array schema from the root array folder
+  // In SCHEMA_ONLY mode the root dir is not listed, so check for the legacy
+  // pre-v10 schema file explicitly. Skipped when sm.legacy_compatibility=false.
+  auto legacy_compat = resources_.get().config().get<bool>(
+      "sm.legacy_compatibility", Config::must_find);
+  if (legacy_compat && mode_ == ArrayDirectoryMode::SCHEMA_ONLY) {
     auto old_schema_uri = uri_.join_path(constants::array_schema_filename);
     if (resources_.get().vfs().is_file(old_schema_uri)) {
       array_schema_uris_.push_back(old_schema_uri);

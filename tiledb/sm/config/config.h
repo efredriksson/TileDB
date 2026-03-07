@@ -426,6 +426,15 @@ class Config {
    */
   static const std::string SM_FRAGMENT_INFO_PRELOAD_MBRS;
 
+  /**
+   * If `true`, backward-compatibility checks for pre-v10 array formats are
+   * performed (e.g. checking for the legacy `__array_schema.tdb` file and
+   * creating missing subdirectories on schema writes). Set to `false` if all
+   * arrays in your system were created with TileDB >= v10 to avoid the
+   * extra HTTP round-trips these checks incur on object stores.
+   */
+  static const std::string SM_LEGACY_COMPATIBILITY;
+
   /** If `true` the readers might partially load/unload tile offsets. */
   static const std::string SM_PARTIAL_TILE_OFFSETS_LOADING;
 

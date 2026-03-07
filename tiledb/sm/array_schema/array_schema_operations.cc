@@ -175,16 +175,21 @@ void store_array_schema(
   serialize_array_schema(serializer, *array_schema);
   resources.stats().add_counter("write_array_schema_size", tile->size());
 
-  // Delete file if it exists already
-  if (resources.vfs().is_file(schema_uri)) {
+  // The following checks are only needed for backward compatibility with
+  // pre-v10 arrays. They can be disabled via sm.legacy_compatibility=false.
+  auto legacy_compat = resources.config().get<bool>(
+      "sm.legacy_compatibility", Config::must_find);
+
+  // Delete file if it exists already (pre-v10 arrays stored schema in root)
+  if (legacy_compat && resources.vfs().is_file(schema_uri)) {
     resources.vfs().remove_file(schema_uri);
   }
 
-  // Check if the array schema directory exists
-  // If not create it, this is caused by a pre-v10 array
+  // Create the array schema directory if it doesn't exist.
+  // This is needed when updating the schema of a pre-v10 array.
   URI array_schema_dir_uri =
       array_schema->array_uri().join_path(constants::array_schema_dir_name);
-  if (!resources.vfs().is_dir(array_schema_dir_uri)) {
+  if (legacy_compat && !resources.vfs().is_dir(array_schema_dir_uri)) {
     resources.vfs().create_dir(array_schema_dir_uri);
   }
 
@@ -195,7 +200,7 @@ void store_array_schema(
   // array created before version 19.
   URI array_enumerations_dir_uri =
       array_schema_dir_uri.join_path(constants::array_enumerations_dir_name);
-  if (!resources.vfs().is_dir(array_enumerations_dir_uri)) {
+  if (legacy_compat && !resources.vfs().is_dir(array_enumerations_dir_uri)) {
     resources.vfs().create_dir(array_enumerations_dir_uri);
   }
 

@@ -168,6 +168,7 @@ const std::string Config::SM_MAX_TILE_OVERLAP_SIZE = "314572800";  // 300MiB
 const std::string Config::SM_GROUP_TIMESTAMP_START = "0";
 const std::string Config::SM_GROUP_TIMESTAMP_END = std::to_string(UINT64_MAX);
 const std::string Config::SM_FRAGMENT_INFO_PRELOAD_MBRS = "false";
+const std::string Config::SM_LEGACY_COMPATIBILITY = "true";
 const std::string Config::SM_PARTIAL_TILE_OFFSETS_LOADING = "false";
 const std::string Config::SM_ENUMERATIONS_MAX_SIZE = "10485760";        // 10MiB
 const std::string Config::SM_ENUMERATIONS_MAX_TOTAL_SIZE = "52428800";  // 50MiB
@@ -405,6 +406,8 @@ const std::map<std::string, std::string> default_config_values = {
     std::make_pair("sm.group.timestamp_end", Config::SM_GROUP_TIMESTAMP_END),
     std::make_pair(
         "sm.fragment_info.preload_mbrs", Config::SM_FRAGMENT_INFO_PRELOAD_MBRS),
+    std::make_pair(
+        "sm.legacy_compatibility", Config::SM_LEGACY_COMPATIBILITY),
     std::make_pair(
         "sm.partial_tile_offsets_loading",
         Config::SM_PARTIAL_TILE_OFFSETS_LOADING),
@@ -817,6 +820,8 @@ Status Config::sanity_check(
     if (value != "bytes" && value != "elements")
       throw ConfigException("Invalid offsets format parameter value");
   } else if (param == "sm.fragment_info.preload_mbrs") {
+    RETURN_NOT_OK(utils::parse::convert(value, &v));
+  } else if (param == "sm.legacy_compatibility") {
     RETURN_NOT_OK(utils::parse::convert(value, &v));
   } else if (param == "ssl.verify") {
     RETURN_NOT_OK(utils::parse::convert(value, &v));

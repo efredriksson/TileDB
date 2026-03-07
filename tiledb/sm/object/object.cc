@@ -64,8 +64,13 @@ bool is_array(ContextResources& resources, const URI& uri) {
       return true;
     }
 
-    // If there is no schema directory, we check schema file
-    return vfs.is_file(uri.join_path(constants::array_schema_filename));
+    // If there is no schema directory, fall back to the legacy pre-v10 schema
+    // file. This check can be disabled via sm.legacy_compatibility=false when
+    // all arrays in the system are v10+.
+    auto legacy_compat =
+        resources.config().get<bool>("sm.legacy_compatibility", Config::must_find);
+    return legacy_compat &&
+           vfs.is_file(uri.join_path(constants::array_schema_filename));
   }
 }
 
